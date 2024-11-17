@@ -1,18 +1,18 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../dto/result.dto";
+import { AccountResponseDTO, AccountResultsDTO, ServiceResultDTO } from "../dto/result.dto";
 import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
 import { AccountDTO } from "../dto/account.dto";
 
 export class AccountService {
-  async createAccount(accountInput: AccountDTO): Promise<ServiceResultDTO> {
+  async createAccount(accountInput: AccountDTO,user_id:number): Promise<ServiceResultDTO> {
     const query = `
     INSERT INTO "tbm_Accounts" (user_id, account_name, created_at, updated_at)
     VALUES ($1, $2, NOW(), NOW())
     RETURNING account_id;
   `;
-    const values = [accountInput.user_id, accountInput.account_name];
+    const values = [user_id, accountInput.account_name];
     console.log(values);
     
     try {
@@ -24,7 +24,7 @@ export class AccountService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      throw new CustomError('An error occurred while creating the account', 500);
     }
   }
 
@@ -45,13 +45,33 @@ export class AccountService {
         };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      throw new CustomError('An error occurred while getting the account', 500);
     }
   }
-
+  async getAllAccount(user_id: number): Promise<AccountResponseDTO> {
+    const query = `
+    SELECT account_id,user_id,account_name FROM "tbm_Accounts"
+    WHERE user_id = $1;
+  `;
+    try {
+      const getResult = await pool.query(query, [user_id]);
+      const accountResult :AccountResultsDTO[] = getResult.rows;
+      if (!accountResult) {
+        throw new CustomError('Account not found', 404);
+      }
+        return {
+          message: "Get Success",
+          results: accountResult,
+        };
+    } catch (error: any) {
+      handleDbError(error)
+      throw new CustomError('An error occurred while getting the account', 500);
+    }
+  }
   async updateAccount(
     account_id: number,
-    accountInput: AccountDTO
+    accountInput: AccountDTO,
+    user_id:number
   ): Promise<ServiceResultDTO> {
     const updateQuery = `
     UPDATE "tbm_Accounts"
@@ -60,7 +80,7 @@ export class AccountService {
     RETURNING account_id;
   `;
     try {
-      const updateResult = await pool.query(updateQuery, [accountInput.account_name,account_id,accountInput.user_id]);
+      const updateResult = await pool.query(updateQuery, [accountInput.account_name,account_id,user_id]);
       
       if (updateResult.rowCount === 0) {
         throw new CustomError('Cannot change user_id or Account not found', 400);
@@ -73,7 +93,7 @@ export class AccountService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while updating the user', 500);
+      throw new CustomError('An error occurred while updating the account', 500);
     }
   }
 
@@ -97,7 +117,7 @@ export class AccountService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while deleting the user', 500);
+      throw new CustomError('An error occurred while deleting the account', 500);
     }
   }
 }

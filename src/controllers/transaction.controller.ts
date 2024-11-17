@@ -20,6 +20,7 @@ const transactionService: TransactionService = new TransactionService();
 
 export class TransactionController {
   async createTransaction(req: Request, res: Response): Promise<void> {
+
     if (req.file) {
       try {
         const cdnResult: CdnResultDTO = await cloudinaryUpload(req.file);
@@ -80,6 +81,14 @@ export class TransactionController {
   }
 
   async updateTransaction(req: Request, res: Response): Promise<void> {
+    const { user_id } = req.body;
+    console.log("user_id in updateTransaction:", user_id);  // ตรวจสอบว่าค่ามีหรือไม่
+  
+    if (!user_id) {
+      res.status(400).json({ message: "User ID is missing" });
+      return;
+    }
+
     const transaction_id: number = parseInt(req.params.transaction_id, 10);
     if (!transaction_id) {
       res.status(400).json({ error: "transaction_id is required" });
@@ -162,7 +171,8 @@ export class TransactionController {
   async getFilterTransaction(req: Request, res: Response): Promise<void> {
     const { month, year, account_name,category_name,transaction_type,limit,page }: QueryParams = req.query;
     const { user_id } = req.body;
-
+    console.log("getFilterTransaction",user_id);
+    
     const queryParams : QueryParams = {
         month,
         year,

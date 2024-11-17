@@ -2,11 +2,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../db/db';
 import { CustomError, handleDbError } from '../utils/handle.error';
-import { generateCustomToken } from '../utils/auth.util';
+import { generateToken } from '../utils/auth.util';
 import { LoginServiceResultDTO } from '../dto/auth.dto';
 
 export class AuthService {
-  async login (username: string,password:string,device:string):Promise<LoginServiceResultDTO> {
+  async login (username: string,password:string,device_id:string):Promise<LoginServiceResultDTO> {
     const query = `
     SELECT * FROM "tbm_Users" WHERE username = $1;
   `;
@@ -22,6 +22,7 @@ export class AuthService {
       
       const userInformation =  UserResult.rows[0]
       const hashedPassword = UserResult.rows[0].password;
+      const user_id = UserResult.rows[0].user_id;
       const isPasswordValid = await bcrypt.compare(password, hashedPassword);
       if (!isPasswordValid) {
         throw new CustomError(
@@ -29,34 +30,36 @@ export class AuthService {
           401
         );
       }
-      const token = generateCustomToken()
+      const token = generateToken(user_id)
       const expireAt = new Date(Date.now() + 60 * 60 * 1000);
       const insertSessionQuery = `
-        INSERT INTO "tbm_Sessions" (user_id, token, device, created_at ,expires_at)
+        INSERT INTO "tbm_Sessions" (user_id, token, device_id, created_at ,expires_at)
         VALUES ($1, $2, $3, NOW() ,$4)
       `;
       await pool.query(insertSessionQuery, [
         userInformation.user_id,
         token,
-        device,
+        device_id,
         expireAt
       ]);
       return {
         userId: userInformation.user_id,
-        token: token
+        token: token,
+        device_id:device_id
       };
     } catch (error: any) {
       handleDbError(error)
       throw new CustomError('An error occurred while log in', 500);
     }
   }
-  async logoutFromDevice (token:string,device:string):Promise<string> {
+
+  async logoutFromDevice (token:string,device_id:string):Promise<string> {
     const query = `
       DELETE FROM "tbm_Sessions"
-      WHERE token = $1 AND device = $2
+      WHERE token = $1 AND device_id = $2
   `;
   try {
-    const result = await pool.query(query, [token, device]);
+    const result = await pool.query(query, [token, device_id]);
     if (result.rowCount === 0) {
       throw new CustomError('No active session found for this device',404);
     }

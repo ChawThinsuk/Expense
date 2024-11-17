@@ -39,7 +39,7 @@ export class TransactionService {
       const newTransactionId = result.rows[0].transaction_id;
       return {
         message: "Create Success",
-        results: `New account created with ID: ${newTransactionId}`,
+        results: `New Transaaction created with ID: ${newTransactionId}`,
       };
     } catch (error: any) {
       console.log(error);
@@ -118,9 +118,11 @@ export class TransactionService {
       const updatedTransactionId = updateResult.rows[0].transaction_id;
       return {
         message: "Update Success",
-        results: `Account updated with ID: ${updatedTransactionId}`,
+        results: `Transaction updated with ID: ${updatedTransactionId}`,
       };
     } catch (error: any) {
+      console.log(error);
+      
       handleDbError(error);
       throw new CustomError(
         "An error occurred while updating the transaction",

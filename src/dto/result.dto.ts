@@ -8,6 +8,25 @@ export interface CdnResultDTO {
     cdnUrl?: string;
     publicId?: string
 }  
+export interface CategoryResultsDTO {
+    category_id:number
+    user_id:number
+    category_name:string
+  }
+  export interface CategoryResponseDTO {
+    message: string;
+    results: CategoryResultsDTO[];
+  }
+  export interface AccountResultsDTO {
+    account_id:number
+    user_id:number
+    account_name:string
+  }
+  export interface AccountResponseDTO {
+    message: string;
+    results: AccountResultsDTO[];
+  }
+
 
 export interface TransactionResultDTO {
     account_name: string;
@@ -39,3 +58,4 @@ export interface TransactionResultDTO {
     message: string;
     results: TransactionSummaryResultDTO;
   }
+

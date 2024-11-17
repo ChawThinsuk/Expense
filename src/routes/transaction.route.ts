@@ -1,6 +1,7 @@
 import express from 'express';
 import upload from '../middlewares/multer';
 import { TransactionController } from '../controllers/transaction.controller';
+import { authenticateToken } from '../middlewares/validatetoken';
 
 const router = express.Router();
 const transactionController = new TransactionController();

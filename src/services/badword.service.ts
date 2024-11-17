@@ -94,7 +94,7 @@ export class BadWordService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while deleting the user', 500);
+      throw new CustomError('An error occurred while deleting the bad word', 500);
     }
   }
 }

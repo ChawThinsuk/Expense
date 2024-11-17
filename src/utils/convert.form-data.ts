@@ -5,6 +5,8 @@ import { UpdateTransactionDTO } from "../dto/update-transaction.dto";
 import { plainToInstance } from "class-transformer";
 
 const transactionConvertFormData = (req: Request): TransactionDTO => {
+    console.log("req.body.user_idreq.body.user_id",req.body.user_id);
+    
     if (
       !req.body.user_id ||
       !req.body.account_id ||
@@ -54,6 +56,8 @@ const transactionConvertFormData = (req: Request): TransactionDTO => {
     };
   };
   const updateTransactionConvertFormData = async (req: Request): Promise<UpdateTransactionDTO> => {
+    console.log("req.body.user_idreq.body.user_id",req.body.user_id);
+
     const transactionData = plainToInstance(UpdateTransactionDTO, {
       user_id: req.body.user_id ? parseInt(req.body.user_id, 10) : undefined,
       account_id: req.body.account_id ? parseInt(req.body.account_id, 10) : undefined,

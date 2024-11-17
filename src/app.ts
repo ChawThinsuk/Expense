@@ -6,11 +6,21 @@ import categoryRoutes from './routes/category.route';
 import transactionRoutes from './routes/transaction.route'
 import badWordRoutes from './routes/badword.route'
 import { authenticateToken } from './middlewares/validatetoken';
+import cors from 'cors';
+
 
 const app = express();
 const port: number = 3000;
 
 app.use(express.json());
+
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  preflightContinue: false,
+  optionsSuccessStatus: 200 
+}));
 
 app.use(authenticateToken);
 
