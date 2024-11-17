@@ -1,10 +1,10 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../models/result.dto";
-import { UserDTO } from "../models/user.dto";
+import { ServiceResultDTO } from "../dto/result.dto";
+import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
-import { AccountDTO } from "../models/account.dto";
-import { CategoryDTO } from "../models/category.dto";
+import { AccountDTO } from "../dto/account.dto";
+import { CategoryDTO } from "../dto/category.dto";
 
 export class CategoryService {
   async createCategory(categoryInput: CategoryDTO): Promise<ServiceResultDTO> {

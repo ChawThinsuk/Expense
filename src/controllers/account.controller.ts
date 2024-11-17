@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { ServiceResultDTO } from "../models/result.dto";
+import { ServiceResultDTO } from "../dto/result.dto";
 import { plainToInstance } from "class-transformer";
 import { validate, ValidationError } from "class-validator";
 import { CustomError, handleValidationError } from "../utils/handle.error";
 import { AccountService } from "../services/account.service";
-import { AccountDTO } from "../models/account.dto";
+import { AccountDTO } from "../dto/account.dto";
 
 const accountService: AccountService = new AccountService();
 

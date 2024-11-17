@@ -1,24 +1,27 @@
 import { Request, Response } from "express";
-import { UserService } from "../services/user.service";
 import { ServiceResultDTO } from "../dto/result.dto";
-import { UserDTO } from "../dto/user.dto";
 import { plainToInstance } from "class-transformer";
 import { validate, ValidationError } from "class-validator";
 import { CustomError, handleValidationError } from "../utils/handle.error";
+import { AccountService } from "../services/account.service";
+import { AccountDTO } from "../dto/account.dto";
+import { BadWordService } from "../services/badword.service";
+import { BadWordDTO } from "../dto/badword.dto";
 
-const userService: UserService = new UserService();
+const badwordService: BadWordService = new BadWordService();
 
-export class UserController {
+export class BadWordController {
   
-  async createUser(req: Request, res: Response): Promise<void> {
-    const userInput: UserDTO = plainToInstance(UserDTO, req.body);
-    const errors = await validate(userInput);
+  async createBadWord (req: Request, res: Response): Promise<void> {
+    const badwordInput: BadWordDTO = plainToInstance(BadWordDTO, req.body);
+    const errors = await validate(badwordInput);
     if (errors.length > 0) {
       handleValidationError(res, errors);
       return;
     }
+
     try {
-      const result: ServiceResultDTO = await userService.createUser(userInput);
+      const result : ServiceResultDTO = await badwordService.createBadWord(badwordInput);
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof CustomError) {
@@ -29,14 +32,9 @@ export class UserController {
     }
   }
 
-  async getUser(req: Request, res: Response): Promise<void> {
-    const user_id: number = parseInt(req.params.user_id, 10);  
-    if (!user_id) {
-      res.status(400).json({ error: 'user_id is required' });
-      return;
-    }
+  async getAllBadWords (req: Request, res: Response): Promise<void> {
     try {
-      const result : ServiceResultDTO = await userService.getUser(user_id);
+      const result : ServiceResultDTO = await badwordService.getAllBadWords();
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof CustomError) {
@@ -48,20 +46,21 @@ export class UserController {
   }
 
 
-  async updateUser(req: Request, res: Response): Promise<void> {
-    const user_id: number = parseInt(req.params.user_id, 10);  
-    if (!user_id) {
-      res.status(400).json({ error: 'user_id is required' });
+  async updateBadWord (req: Request, res: Response): Promise<void> {
+    const oldBadWord : string = req.params.oldBadWord  
+    if (!oldBadWord) {
+      res.status(400).json({ error: 'oldBadWord is required' });
       return;
     }
-    const userInput: UserDTO = plainToInstance(UserDTO, req.body);
-    const errors = await validate(userInput);
+
+    const badWordInput: BadWordDTO = plainToInstance(BadWordDTO, req.body);
+    const errors = await validate(badWordInput);
     if (errors.length > 0) {
       handleValidationError(res, errors);
       return;
     }
     try {
-      const result: ServiceResultDTO = await userService.updateUser(user_id, userInput);
+      const result: ServiceResultDTO = await badwordService.updateBadWord(oldBadWord, badWordInput);
       res.status(200).json(result);
     } catch (error: any) {
       console.log(error);
@@ -75,14 +74,14 @@ export class UserController {
 
 
 
-  async deleteUser(req: Request, res: Response): Promise<void> {
-    const user_id: number = parseInt(req.params.user_id, 10);  
-    if (!user_id) {
-      res.status(400).json({ error: 'user_id is required' });
+  async deleteBadWord(req: Request, res: Response): Promise<void> {
+    const oldBadWord : string = req.params.oldBadWord  
+    if (!oldBadWord) {
+      res.status(400).json({ error: 'bad word is required' });
       return;
     }
     try {
-      const result: ServiceResultDTO = await userService.deleteUser(user_id);
+      const result: ServiceResultDTO = await badwordService.deleteBadWord(oldBadWord);
       res.status(200).json(result);
     } catch (error: any) {
       console.log(error);

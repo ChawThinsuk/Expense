@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { ServiceResultDTO } from "../models/result.dto";
+import { ServiceResultDTO } from "../dto/result.dto";
 import { plainToInstance } from "class-transformer";
 import { validate, ValidationError } from "class-validator";
 import { CustomError, handleValidationError } from "../utils/handle.error";
-import { AccountDTO } from "../models/account.dto";
+import { AccountDTO } from "../dto/account.dto";
 import { CategoryService } from "../services/category.service";
-import { CategoryDTO } from "../models/category.dto";
+import { CategoryDTO } from "../dto/category.dto";
 
 const categoryService: CategoryService = new CategoryService();
 
