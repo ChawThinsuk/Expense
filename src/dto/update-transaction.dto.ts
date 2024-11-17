@@ -3,10 +3,6 @@ import { IsString, IsNumber, IsDate, IsIn, IsBoolean, IsOptional } from 'class-v
 export class UpdateTransactionDTO {
   @IsOptional()
   @IsNumber()
-  user_id ?: number | undefined;
-
-  @IsOptional()
-  @IsNumber()
   account_id ?: number | undefined;
 
   @IsOptional()

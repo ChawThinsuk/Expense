@@ -1,19 +1,19 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../dto/result.dto";
+import { CategoryResponseDTO, CategoryResultsDTO, ServiceResultDTO } from "../dto/result.dto";
 import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
 import { AccountDTO } from "../dto/account.dto";
 import { CategoryDTO } from "../dto/category.dto";
 
 export class CategoryService {
-  async createCategory(categoryInput: CategoryDTO): Promise<ServiceResultDTO> {
+  async createCategory(categoryInput: CategoryDTO,user_id:number): Promise<ServiceResultDTO> {
     const query = `
     INSERT INTO "tbm_Categories" (user_id, category_name, created_at, updated_at)
     VALUES ($1, $2, NOW(), NOW())
     RETURNING category_id;
   `;
-    const values = [categoryInput.user_id, categoryInput.category_name];
+    const values = [user_id, categoryInput.category_name];
     try {
       const result = await pool.query(query, values);
       const newCategoryId = result.rows[0].category_id;
@@ -23,7 +23,7 @@ export class CategoryService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      throw new CustomError('An error occurred while creating the category', 500);
     }
   }
 
@@ -36,7 +36,7 @@ export class CategoryService {
       const getResult = await pool.query(query, [category_id]);
       const categoryResult = getResult.rows[0];
       if (!categoryResult) {
-        throw new CustomError('Category not found', 404);
+        throw new CustomError('Category not category', 404);
       }
         return {
           message: "Get Success",
@@ -44,13 +44,35 @@ export class CategoryService {
         };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      throw new CustomError('An error occurred while getting the category', 500);
+    }
+  }
+  async getAllCategory(user_id: number): Promise<CategoryResponseDTO> {
+    const query = `
+    SELECT category_id,user_id,category_name FROM "tbm_Categories"
+    WHERE user_id = $1;
+  `;
+    try {
+      const getResult = await pool.query(query, [user_id]);
+      const categoryResult : CategoryResultsDTO[] = getResult.rows;
+      if (!categoryResult) {
+        throw new CustomError('Category not category', 404);
+      }
+        return {
+          message: "Get Success",
+          results: categoryResult,
+        };
+    } catch (error: any) {
+      handleDbError(error)
+      throw new CustomError('An error occurred while getting the category', 500);
     }
   }
 
+
   async updateCategory(
     category_id: number,
-    categoryInput: CategoryDTO
+    categoryInput: CategoryDTO,
+    user_id:number
   ): Promise<ServiceResultDTO> {
     const updateQuery = `
     UPDATE "tbm_Categories"
@@ -59,7 +81,7 @@ export class CategoryService {
     RETURNING category_id;
   `;
     try {
-      const updateResult = await pool.query(updateQuery, [categoryInput.category_name,category_id,categoryInput.user_id]);
+      const updateResult = await pool.query(updateQuery, [categoryInput.category_name,category_id,user_id]);
       
       if (updateResult.rowCount === 0) {
         throw new CustomError('Cannot change user_id or Category not found', 400);
@@ -72,7 +94,7 @@ export class CategoryService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while updating the user', 500);
+      throw new CustomError('An error occurred while updating the category', 500);
     }
   }
 
@@ -96,7 +118,7 @@ export class CategoryService {
       };
     } catch (error: any) {
       handleDbError(error)
-      throw new CustomError('An error occurred while deleting the user', 500);
+      throw new CustomError('An error occurred while deleting the category', 500);
     }
   }
 }

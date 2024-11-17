@@ -9,6 +9,6 @@ router.post('/createaccount', (req, res) => accountController.createAccount(req,
 router.get('/getaccount/:account_id', (req, res) => accountController.getAccount(req, res));
 router.put('/updateaccount/:account_id', (req, res) => accountController.updateAccount(req, res));
 router.delete('/deleteaccount/:account_id', (req, res) => accountController.deleteAccount(req, res));
-
+router.get('/getallaccount', (req, res) => accountController.getAllAccount(req, res));
 
 export default router;

@@ -3,10 +3,6 @@ import { IsString, IsNotEmpty, IsNumber, IsDate, IsIn, IsBoolean } from 'class-v
 export class TransactionDTO {
   @IsNotEmpty()
   @IsNumber()
-  user_id !: number;
-
-  @IsNotEmpty()
-  @IsNumber()
   account_id !: number;
 
   @IsNotEmpty()
@@ -40,4 +36,13 @@ export class TransactionDTO {
 
   @IsBoolean()
   deleteImage?: boolean
+}
+export interface QueryParams {
+  month?: string;        
+  year?: string;
+  account_name?: string;
+  category_name?: string;
+  transaction_type?: string
+  limit?: number
+  page?: number
 }

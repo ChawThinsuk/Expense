@@ -1,16 +1,17 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../dto/result.dto";
+import { ServiceResultDTO, TransactionResponseDTO, TransactionResultDTO, TransactionSummaryResponseDTO, TransactionSummaryResultDTO } from "../dto/result.dto";
 import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
 import { AccountDTO } from "../dto/account.dto";
-import { TransactionDTO } from "../dto/transaction.dto";
+import { QueryParams, TransactionDTO } from "../dto/transaction.dto";
 import { cloudinaryDelete } from "../utils/cdn.handle";
 import { UpdateTransactionDTO } from "../dto/update-transaction.dto";
+import { queryParamsCheckCondition } from "../utils/transaction.util";
 
 export class TransactionService {
   async createTransaction(
-    transactionInput: TransactionDTO
+    transactionInput: TransactionDTO,user_id:number
   ): Promise<ServiceResultDTO> {
     const query = `
     INSERT INTO "tbs_Transactions" (user_id, account_id,category_id,amount,date,comment,slip_image_url,cdn_public_id,transaction_type,created_at, updated_at)
@@ -18,7 +19,7 @@ export class TransactionService {
     RETURNING transaction_id;
   `;
     const values = [
-      transactionInput.user_id,
+      user_id,
       transactionInput.account_id,
       transactionInput.category_id,
       transactionInput.amount,
@@ -38,7 +39,7 @@ export class TransactionService {
       const newTransactionId = result.rows[0].transaction_id;
       return {
         message: "Create Success",
-        results: `New account created with ID: ${newTransactionId}`,
+        results: `New Transaaction created with ID: ${newTransactionId}`,
       };
     } catch (error: any) {
       console.log(error);
@@ -77,18 +78,21 @@ export class TransactionService {
 
   async updateTransaction(
     transaction_id: number,
-    transactionInput: UpdateTransactionDTO
+    transactionInput: UpdateTransactionDTO,
   ): Promise<ServiceResultDTO> {
     const setStatements: string[] = [];
     const values: any[] = [];
 
-    Object.entries(transactionInput).forEach(([key, value], index) => {
-      if (value !== undefined) {
-        setStatements.push(`${key} = $${index + 1}`);
+    let index = 1; 
+    Object.entries(transactionInput).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'deleteImage') {
+        setStatements.push(`${key} = $${index}`);
         values.push(value);
+        index++;  
       }
     });
-    console.log(setStatements.length);
+
+    setStatements.push(`updated_at = NOW()`);
     
     if (setStatements.length === 0) {
       throw new CustomError("No fields to update",400);
@@ -102,8 +106,7 @@ export class TransactionService {
   `;
     values.push(transaction_id);
     console.log(query);
-    console.log(values);
-
+    
     try {
       const updateResult = await pool.query(query, values);
 
@@ -117,9 +120,11 @@ export class TransactionService {
       const updatedTransactionId = updateResult.rows[0].transaction_id;
       return {
         message: "Update Success",
-        results: `Account updated with ID: ${updatedTransactionId}`,
+        results: `Transaction updated with ID: ${updatedTransactionId}`,
       };
     } catch (error: any) {
+      console.log(error);
+      
       handleDbError(error);
       throw new CustomError(
         "An error occurred while updating the transaction",
@@ -150,6 +155,124 @@ export class TransactionService {
       handleDbError(error);
       throw new CustomError(
         "An error occurred while deleting the transaction",
+        500
+      );
+    }
+  }
+
+  async getFilterTransaction(user_id:number,queryParams:QueryParams): Promise<TransactionResponseDTO> {
+    const limit = queryParams.limit || 10; 
+    const page = queryParams.page || 1; 
+  
+    const offset = (page - 1) * limit; 
+    let query = `
+      SELECT a.account_name, c.category_name,t.amount, t.date,t.comment,t.slip_image_url,t.transaction_type
+      FROM "tbs_Transactions" t
+      JOIN "tbm_Categories" c ON t.category_id = c.category_id
+      JOIN "tbm_Accounts" a ON t.account_id = a.account_id
+      WHERE 1 = 1
+    `;
+    
+    const params: any[] = [];
+    query = queryParamsCheckCondition(queryParams, query, params,user_id);
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    console.log(query);
+    console.log(params);
+    
+    try {
+      const getResult = await pool.query(query, params);
+      const transactionResult : TransactionResultDTO[] = getResult.rows;
+      if (!transactionResult) {
+        throw new CustomError("Transaction not found", 404);
+      }
+      let totalCountQuery = `
+      SELECT COUNT(*) FROM "tbs_Transactions" t
+      JOIN "tbm_Categories" c ON t.category_id = c.category_id
+      JOIN "tbm_Accounts" a ON t.account_id = a.account_id
+      WHERE 1 = 1
+    `;
+    const totalQueryParams: any[] = [];
+    totalCountQuery = queryParamsCheckCondition(queryParams, totalCountQuery, totalQueryParams,user_id); 
+    // console.log(totalCountQuery);
+    
+    const totalCountResult = await pool.query(totalCountQuery, totalQueryParams);
+    const totalCount = parseInt(totalCountResult.rows[0].count, 10);
+    const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        message: "Get Success",
+        results: transactionResult,
+        pagination: {
+          totalCount:totalCount,
+          totalPages: totalPages,
+          currentPage: page,
+          pageSize: limit
+        }
+      };
+    } catch (error: any) {
+      console.log(error);
+      
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while getting the transaction",
+        500
+      );
+    }
+  }
+  async getSummaryTransaction(user_id:number,queryParams:QueryParams):Promise<TransactionSummaryResponseDTO> {
+    let query = `
+    SELECT 
+      SUM(CASE WHEN t.transaction_type = 'income' THEN t.amount ELSE 0 END) AS total_income,
+      SUM(CASE WHEN t.transaction_type = 'expense' THEN t.amount ELSE 0 END) AS total_expense
+    FROM "tbs_Transactions" t
+    JOIN "tbm_Categories" c ON t.category_id = c.category_id
+    JOIN "tbm_Accounts" a ON t.account_id = a.account_id
+    WHERE 1 = 1
+  `;
+    const params: any[] = [];
+    query = queryParamsCheckCondition(queryParams, query, params,user_id);
+    console.log(query);
+    
+    try {
+      const getResult = await pool.query(query, params);
+      const result:TransactionSummaryResultDTO = getResult.rows[0];
+      
+      return {
+        message: "Get Success",
+        results: result,
+      };
+    } catch (error: any) {
+      console.log(error);
+      
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while getting the transaction",
+        500
+      );
+    }
+  }
+  async getCdnPublicId (transaction_id:number):Promise<any> {
+    let query = `
+    SELECT cdn_public_id FROM "tbs_Transactions" WHERE transaction_id = $1
+    `
+    try {
+      const getResult = await pool.query(query, [transaction_id]);
+      const cdn_public_key = getResult.rows[0].cdn_public_id;
+      console.log(cdn_public_key);
+      
+      if (!cdn_public_key) {
+        throw new CustomError(
+          "Transaction didn't have cdn_public_key",
+          404
+        );
+      }
+      return cdn_public_key
+    } catch (error:any) {
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while getting the transaction",
         500
       );
     }
