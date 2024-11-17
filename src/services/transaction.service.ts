@@ -1,103 +1,157 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../models/result.dto";
-import { UserDTO } from "../models/user.dto";
+import { ServiceResultDTO } from "../dto/result.dto";
+import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
-import { AccountDTO } from "../models/account.dto";
+import { AccountDTO } from "../dto/account.dto";
+import { TransactionDTO } from "../dto/transaction.dto";
+import { cloudinaryDelete } from "../utils/cdn.handle";
+import { UpdateTransactionDTO } from "../dto/update-transaction.dto";
 
 export class TransactionService {
-  async createTransaction(accountInput: AccountDTO): Promise<ServiceResultDTO> {
+  async createTransaction(
+    transactionInput: TransactionDTO
+  ): Promise<ServiceResultDTO> {
     const query = `
-    INSERT INTO "tbm_Accounts" (user_id, account_name, created_at, updated_at)
-    VALUES ($1, $2, NOW(), NOW())
-    RETURNING account_id;
+    INSERT INTO "tbs_Transactions" (user_id, account_id,category_id,amount,date,comment,slip_image_url,cdn_public_id,transaction_type,created_at, updated_at)
+    VALUES ($1, $2,$3,$4,$5,$6,$7,$8,$9, NOW(), NOW())
+    RETURNING transaction_id;
   `;
-    const values = [accountInput.user_id, accountInput.account_name];
-    console.log(values);
-    
+    const values = [
+      transactionInput.user_id,
+      transactionInput.account_id,
+      transactionInput.category_id,
+      transactionInput.amount,
+      transactionInput.date,
+      transactionInput.comment,
+      transactionInput.slip_image_url,
+      transactionInput.cdn_public_id,
+      transactionInput.transaction_type,
+    ];
+    console.log(
+      "transactionInput.cdn_public_id",
+      transactionInput.cdn_public_id
+    );
+
     try {
       const result = await pool.query(query, values);
-      const newAccountId = result.rows[0].account_id;
+      const newTransactionId = result.rows[0].transaction_id;
       return {
         message: "Create Success",
-        results: `New account created with ID: ${newAccountId}`,
+        results: `New account created with ID: ${newTransactionId}`,
       };
     } catch (error: any) {
-      handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      console.log(error);
+
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while creating the transaction",
+        500
+      );
     }
   }
 
-  async getAccount(account_id: number): Promise<ServiceResultDTO> {
+  async getTransaction(transaction_id: number): Promise<ServiceResultDTO> {
     const query = `
-    SELECT * FROM "tbm_Accounts"
-    WHERE account_id = $1;
+    SELECT * FROM "tbs_Transactions"
+    WHERE transaction_id = $1;
   `;
     try {
-      const getResult = await pool.query(query, [account_id]);
-      const accountResult = getResult.rows[0];
-      if (!accountResult) {
-        throw new CustomError('Account not found', 404);
+      const getResult = await pool.query(query, [transaction_id]);
+      const transactionResult = getResult.rows[0];
+      if (!transactionResult) {
+        throw new CustomError("Transaction not found", 404);
       }
-        return {
-          message: "Get Success",
-          results: accountResult,
-        };
+      return {
+        message: "Get Success",
+        results: transactionResult,
+      };
     } catch (error: any) {
-      handleDbError(error)
-      throw new CustomError('An error occurred while getting the user', 500);
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while getting the transaction",
+        500
+      );
     }
   }
 
-  async updateAccount(
-    account_id: number,
-    accountInput: AccountDTO
+  async updateTransaction(
+    transaction_id: number,
+    transactionInput: UpdateTransactionDTO
   ): Promise<ServiceResultDTO> {
-    const updateQuery = `
-    UPDATE "tbm_Accounts"
-    SET account_name = $1, updated_at = NOW()
-    WHERE account_id = $2 AND user_id = $3
-    RETURNING account_id;
+    const setStatements: string[] = [];
+    const values: any[] = [];
+
+    Object.entries(transactionInput).forEach(([key, value], index) => {
+      if (value !== undefined) {
+        setStatements.push(`${key} = $${index + 1}`);
+        values.push(value);
+      }
+    });
+    console.log(setStatements.length);
+    
+    if (setStatements.length === 0) {
+      throw new CustomError("No fields to update",400);
+    }
+
+    const query = `
+    UPDATE "tbs_Transactions" 
+    SET ${setStatements.join(", ")} 
+    WHERE transaction_id = $${values.length + 1}
+    RETURNING transaction_id
   `;
+    values.push(transaction_id);
+    console.log(query);
+    console.log(values);
+
     try {
-      const updateResult = await pool.query(updateQuery, [accountInput.account_name,account_id,accountInput.user_id]);
-      
+      const updateResult = await pool.query(query, values);
+
       if (updateResult.rowCount === 0) {
-        throw new CustomError('Cannot change user_id or Account not found', 400);
+        throw new CustomError(
+          "Cannot change user_id or Account not found",
+          400
+        );
       }
 
-      const updatedAccountId = updateResult.rows[0].account_id;
+      const updatedTransactionId = updateResult.rows[0].transaction_id;
       return {
         message: "Update Success",
-        results: `Account updated with ID: ${updatedAccountId}`,
+        results: `Account updated with ID: ${updatedTransactionId}`,
       };
     } catch (error: any) {
-      handleDbError(error)
-      throw new CustomError('An error occurred while updating the user', 500);
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while updating the transaction",
+        500
+      );
     }
   }
 
-
-  async deleteAccount(account_id: number): Promise<ServiceResultDTO> {
+  async deleteTransaction(transaction_id: number): Promise<ServiceResultDTO> {
     const deleteQuery = `
-    DELETE FROM "tbm_Accounts"
-    WHERE account_id = $1
-    RETURNING account_id;
+    DELETE FROM "tbs_Transactions"
+    WHERE transaction_id = $1
+    RETURNING transaction_id,cdn_public_id;
   `;
     try {
-      const deleteResult = await pool.query(deleteQuery, [account_id]);
-      const accountResult = deleteResult.rows[0];
-      if (!accountResult) {
-        throw new CustomError('Account not found', 404);
+      const deleteResult = await pool.query(deleteQuery, [transaction_id]);
+      const transactionResult = deleteResult.rows[0];
+      if (!transactionResult) {
+        throw new CustomError("Transaction not found", 404);
       }
-      const deletedAccountId = deleteResult.rows[0].account_id;
+      await cloudinaryDelete(transactionResult.cdn_public_id);
+      const deletedTransactionId = transactionResult.transaction_id;
       return {
         message: "Delete Success",
-        results: `Account ID: ${deletedAccountId} has been delete`,
+        results: `Transaction ID: ${deletedTransactionId} has been delete`,
       };
     } catch (error: any) {
-      handleDbError(error)
-      throw new CustomError('An error occurred while deleting the user', 500);
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while deleting the transaction",
+        500
+      );
     }
   }
 }

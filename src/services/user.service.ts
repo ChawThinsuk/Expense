@@ -1,7 +1,7 @@
 import pool from "../db/db";
 import bcrypt from "bcrypt";
-import { ServiceResultDTO } from "../models/result.dto";
-import { UserDTO } from "../models/user.dto";
+import { ServiceResultDTO } from "../dto/result.dto";
+import { UserDTO } from "../dto/user.dto";
 import { CustomError, handleDbError } from "../utils/handle.error";
 
 export class UserService {
