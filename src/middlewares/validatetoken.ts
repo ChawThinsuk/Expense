@@ -2,8 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import pool from '../db/db';
 
 export async function authenticateToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const token = req.headers.authorization?.split(' ')[1];
 
+    const publicRoutes = ['/auth/login', '/register'];
+    if (publicRoutes.includes(req.path)) {
+      return next();
+    }
+
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     res.status(401).json({ message: 'Token is required' });
     return;

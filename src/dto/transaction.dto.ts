@@ -41,3 +41,12 @@ export class TransactionDTO {
   @IsBoolean()
   deleteImage?: boolean
 }
+export interface QueryParams {
+  month?: string;        
+  year?: string;
+  account_name?: string;
+  category_name?: string;
+  transaction_type?: string
+  limit?: number
+  page?: number
+}
