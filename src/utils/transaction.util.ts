@@ -19,7 +19,7 @@ export const queryParamsCheckCondition = (queryParams:QueryParams,query:string,p
       }
       if (queryParams.category_name) {
         query += ` AND a.account_name = $${params.length + 1}`;
-        params.push(queryParams.category_name);
+        params.push(queryParams.account_name);
       }
       if (queryParams.transaction_type) {
         query += ` AND t.transaction_type = $${params.length + 1}`;

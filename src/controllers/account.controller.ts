@@ -5,13 +5,15 @@ import { validate, ValidationError } from "class-validator";
 import { CustomError, handleValidationError } from "../utils/handle.error";
 import { AccountService } from "../services/account.service";
 import { AccountDTO } from "../dto/account.dto";
+import { decodeToken } from "../utils/auth.util";
 
 const accountService: AccountService = new AccountService();
 
 export class AccountController {
   async createAccount (req: Request, res: Response): Promise<void> {
     const accountInput: AccountDTO = plainToInstance(AccountDTO, req.body);
-    const { user_id } = req.body; 
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;
     const errors = await validate(accountInput);
     if (errors.length > 0) {
       handleValidationError(res, errors);
@@ -47,7 +49,8 @@ export class AccountController {
     }
   }
   async getAllAccount(req: Request, res: Response): Promise<void> {
-    const { user_id } = req.body;     
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;  
     try {
       const result : AccountResponseDTO = await accountService.getAllAccount(user_id);
       res.status(200).json(result);

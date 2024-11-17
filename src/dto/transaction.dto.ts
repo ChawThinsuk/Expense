@@ -3,10 +3,6 @@ import { IsString, IsNotEmpty, IsNumber, IsDate, IsIn, IsBoolean } from 'class-v
 export class TransactionDTO {
   @IsNotEmpty()
   @IsNumber()
-  user_id !: number;
-
-  @IsNotEmpty()
-  @IsNumber()
   account_id !: number;
 
   @IsNotEmpty()

@@ -18,7 +18,7 @@ export class AuthService {
           404
         );
       }
-      console.log(" UserResult.rows[0]", UserResult.rows[0]);
+      // console.log(" UserResult.rows[0]", UserResult.rows[0]);
       
       const userInformation =  UserResult.rows[0]
       const hashedPassword = UserResult.rows[0].password;
@@ -48,6 +48,8 @@ export class AuthService {
         device_id:device_id
       };
     } catch (error: any) {
+      console.log(error);
+      
       handleDbError(error)
       throw new CustomError('An error occurred while log in', 500);
     }

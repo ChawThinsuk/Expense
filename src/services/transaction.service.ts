@@ -11,7 +11,7 @@ import { queryParamsCheckCondition } from "../utils/transaction.util";
 
 export class TransactionService {
   async createTransaction(
-    transactionInput: TransactionDTO
+    transactionInput: TransactionDTO,user_id:number
   ): Promise<ServiceResultDTO> {
     const query = `
     INSERT INTO "tbs_Transactions" (user_id, account_id,category_id,amount,date,comment,slip_image_url,cdn_public_id,transaction_type,created_at, updated_at)
@@ -19,7 +19,7 @@ export class TransactionService {
     RETURNING transaction_id;
   `;
     const values = [
-      transactionInput.user_id,
+      user_id,
       transactionInput.account_id,
       transactionInput.category_id,
       transactionInput.amount,
@@ -78,18 +78,21 @@ export class TransactionService {
 
   async updateTransaction(
     transaction_id: number,
-    transactionInput: UpdateTransactionDTO
+    transactionInput: UpdateTransactionDTO,
   ): Promise<ServiceResultDTO> {
     const setStatements: string[] = [];
     const values: any[] = [];
 
-    Object.entries(transactionInput).forEach(([key, value], index) => {
-      if (value !== undefined) {
-        setStatements.push(`${key} = $${index + 1}`);
+    let index = 1; 
+    Object.entries(transactionInput).forEach(([key, value]) => {
+      if (value !== undefined && key !== 'deleteImage') {
+        setStatements.push(`${key} = $${index}`);
         values.push(value);
+        index++;  
       }
     });
-    console.log(setStatements.length);
+
+    setStatements.push(`updated_at = NOW()`);
     
     if (setStatements.length === 0) {
       throw new CustomError("No fields to update",400);
@@ -103,8 +106,7 @@ export class TransactionService {
   `;
     values.push(transaction_id);
     console.log(query);
-    console.log(values);
-
+    
     try {
       const updateResult = await pool.query(query, values);
 
@@ -177,6 +179,8 @@ export class TransactionService {
     params.push(limit, offset);
 
     console.log(query);
+    console.log(params);
+    
     try {
       const getResult = await pool.query(query, params);
       const transactionResult : TransactionResultDTO[] = getResult.rows;
@@ -191,7 +195,7 @@ export class TransactionService {
     `;
     const totalQueryParams: any[] = [];
     totalCountQuery = queryParamsCheckCondition(queryParams, totalCountQuery, totalQueryParams,user_id); 
-    console.log(totalCountQuery);
+    // console.log(totalCountQuery);
     
     const totalCountResult = await pool.query(totalCountQuery, totalQueryParams);
     const totalCount = parseInt(totalCountResult.rows[0].count, 10);
@@ -242,6 +246,30 @@ export class TransactionService {
     } catch (error: any) {
       console.log(error);
       
+      handleDbError(error);
+      throw new CustomError(
+        "An error occurred while getting the transaction",
+        500
+      );
+    }
+  }
+  async getCdnPublicId (transaction_id:number):Promise<any> {
+    let query = `
+    SELECT cdn_public_id FROM "tbs_Transactions" WHERE transaction_id = $1
+    `
+    try {
+      const getResult = await pool.query(query, [transaction_id]);
+      const cdn_public_key = getResult.rows[0].cdn_public_id;
+      console.log(cdn_public_key);
+      
+      if (!cdn_public_key) {
+        throw new CustomError(
+          "Transaction didn't have cdn_public_key",
+          404
+        );
+      }
+      return cdn_public_key
+    } catch (error:any) {
       handleDbError(error);
       throw new CustomError(
         "An error occurred while getting the transaction",

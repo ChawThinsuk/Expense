@@ -15,12 +15,14 @@ import {
 import { replaceProfanity } from "../utils/replaceProfanity";
 import { TransactionService } from "../services/transaction.service";
 import { UpdateTransactionDTO } from "../dto/update-transaction.dto";
+import { decodeToken } from "../utils/auth.util";
 
 const transactionService: TransactionService = new TransactionService();
 
 export class TransactionController {
   async createTransaction(req: Request, res: Response): Promise<void> {
-
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;
     if (req.file) {
       try {
         const cdnResult: CdnResultDTO = await cloudinaryUpload(req.file);
@@ -50,7 +52,7 @@ export class TransactionController {
 
     try {
       const result: ServiceResultDTO =
-        await transactionService.createTransaction(transactionInput);
+        await transactionService.createTransaction(transactionInput,user_id);
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof CustomError) {
@@ -81,37 +83,27 @@ export class TransactionController {
   }
 
   async updateTransaction(req: Request, res: Response): Promise<void> {
-    const { user_id } = req.body;
-    console.log("user_id in updateTransaction:", user_id);  // ตรวจสอบว่าค่ามีหรือไม่
-  
-    if (!user_id) {
-      res.status(400).json({ message: "User ID is missing" });
-      return;
-    }
-
     const transaction_id: number = parseInt(req.params.transaction_id, 10);
     if (!transaction_id) {
       res.status(400).json({ error: "transaction_id is required" });
       return;
     }
     if (req.file) {
-      try {
-        if (req.body.cdn_public_id) {
-          await cloudinaryDelete(req.body.cdn_public_id);
+        try {
+          await this.handleFileUpload(transaction_id, req);
+        } catch (error) {
+          res.status(500).json({ message: "Error uploading file to Cloudinary" });
+          return;
         }
-        const cdnResult: CdnResultDTO = await cloudinaryUpload(req.file);
-        req.body.slip_image_url = cdnResult.cdnUrl;
-        req.body.cdn_public_id = cdnResult.publicId;
-      } catch (error) {
-        res.status(500).json({ message: "Error uploading file to Cloudinary" });
-        return;
-      }
-    } else if (req.body.deleteImage === "true" && req.body.cdn_public_id) {
-      await cloudinaryDelete(req.body.cdn_public_id);
-      req.body.slip_image_url = null;
-      req.body.cdn_public_id = null;
+      } else if (req.body.deleteImage === "true") {
+        try {
+          await this.handleDeleteImage(transaction_id, req); 
+        } catch (error) {
+          console.log("Error deleting file:", error);
+          res.status(500).json({ message: "Error deleting file from Cloudinary" });
+          return;
+        }
     }
-
     let transactionInput: UpdateTransactionDTO;
     try {
       transactionInput = await updateTransactionConvertFormData(req);
@@ -136,7 +128,7 @@ export class TransactionController {
       const result: ServiceResultDTO =
         await transactionService.updateTransaction(
           transaction_id,
-          transactionInput
+          transactionInput,
         );
       res.status(200).json(result);
     } catch (error: any) {
@@ -170,9 +162,8 @@ export class TransactionController {
 
   async getFilterTransaction(req: Request, res: Response): Promise<void> {
     const { month, year, account_name,category_name,transaction_type,limit,page }: QueryParams = req.query;
-    const { user_id } = req.body;
-    console.log("getFilterTransaction",user_id);
-    
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;
     const queryParams : QueryParams = {
         month,
         year,
@@ -182,6 +173,8 @@ export class TransactionController {
         limit,
         page
       };
+      console.log("queryParams",queryParams);
+      
     try {
         const result: TransactionResponseDTO = await transactionService.getFilterTransaction(user_id,queryParams);
         res.status(200).json(result);
@@ -195,7 +188,8 @@ export class TransactionController {
   }
   async getSummaryTransaction(req: Request, res: Response): Promise<void> {
     const { month, year, account_name,category_name,transaction_type }: QueryParams = req.query;
-    const { user_id } = req.body;
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;
     const queryParams : QueryParams = {
         month,
         year,
@@ -214,4 +208,18 @@ export class TransactionController {
       }
     }
   }
+
+  private async handleFileUpload(transaction_id: number, req: Request): Promise<void> {
+    const cdnResult: CdnResultDTO = await cloudinaryUpload(req.file);
+    req.body.slip_image_url = cdnResult.cdnUrl;
+    req.body.cdn_public_id = cdnResult.publicId;
+  }
+
+  private async handleDeleteImage(transaction_id: number, req: Request): Promise<void> {
+    const cdn_public_key = await transactionService.getCdnPublicId(transaction_id);
+    await cloudinaryDelete(cdn_public_key);
+    req.body.slip_image_url = null;
+    req.body.cdn_public_id = null;
+  }
+
 }

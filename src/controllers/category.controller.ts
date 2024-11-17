@@ -6,14 +6,15 @@ import { CustomError, handleValidationError } from "../utils/handle.error";
 import { AccountDTO } from "../dto/account.dto";
 import { CategoryService } from "../services/category.service";
 import { CategoryDTO } from "../dto/category.dto";
+import { decodeToken } from "../utils/auth.util";
 
 const categoryService: CategoryService = new CategoryService();
 
 export class CategoryController {
-  
   async createCategory (req: Request, res: Response): Promise<void> {
     const categoryInput: CategoryDTO = plainToInstance(CategoryDTO, req.body);
-    const { user_id } = req.body;    
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;   
     const errors = await validate(categoryInput);
     if (errors.length > 0) {
       handleValidationError(res, errors);
@@ -49,9 +50,8 @@ export class CategoryController {
     }
   }
   async getAllCategory(req: Request, res: Response): Promise<void> {
-    const { user_id } = req.body;    
-    console.log("user_id",user_id);
-
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;
     try {
       const result : CategoryResponseDTO = await categoryService.getAllCategory(user_id);
       res.status(200).json(result);
@@ -67,7 +67,8 @@ export class CategoryController {
 
   async updateCategory(req: Request, res: Response): Promise<void> {
     const category_id: number = parseInt(req.params.category_id, 10); 
-    const { user_id } = req.body;     
+    const tokenFromHeader = req.headers.authorization?.split(' ')[1];
+    const user_id = decodeToken(tokenFromHeader!)!.user_id;     
     if (!category_id) {
       res.status(400).json({ error: 'category_id is required' });
       return;
