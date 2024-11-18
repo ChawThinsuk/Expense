@@ -29,6 +29,7 @@ export interface CategoryResultsDTO {
 
 
 export interface TransactionResultDTO {
+    transaction_id: number
     account_name: string;
     category_name: string;
     amount: number;

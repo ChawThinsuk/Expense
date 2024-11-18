@@ -54,12 +54,17 @@ export class TransactionService {
 
   async getTransaction(transaction_id: number): Promise<ServiceResultDTO> {
     const query = `
-    SELECT * FROM "tbs_Transactions"
-    WHERE transaction_id = $1;
+      SELECT t.transaction_id , a.account_name, c.category_name,t.amount, t.date,t.comment,t.slip_image_url,t.transaction_type
+      FROM "tbs_Transactions" t
+      JOIN "tbm_Categories" c ON t.category_id = c.category_id
+      JOIN "tbm_Accounts" a ON t.account_id = a.account_id
+      WHERE t.transaction_id = $1
   `;
     try {
       const getResult = await pool.query(query, [transaction_id]);
       const transactionResult = getResult.rows[0];
+      console.log(transactionResult);
+      
       if (!transactionResult) {
         throw new CustomError("Transaction not found", 404);
       }
@@ -166,7 +171,7 @@ export class TransactionService {
   
     const offset = (page - 1) * limit; 
     let query = `
-      SELECT a.account_name, c.category_name,t.amount, t.date,t.comment,t.slip_image_url,t.transaction_type
+      SELECT t.transaction_id , a.account_name, c.category_name,t.amount, t.date,t.comment,t.slip_image_url,t.transaction_type
       FROM "tbs_Transactions" t
       JOIN "tbm_Categories" c ON t.category_id = c.category_id
       JOIN "tbm_Accounts" a ON t.account_id = a.account_id
