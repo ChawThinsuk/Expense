@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import pool from '../db/db';
 
 export async function authenticateToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const publicRoutes = ['/auth/login', '/register'];
+    const publicRoutes = ['/auth/login', '/user/register'];
     if (publicRoutes.includes(req.path)) {
       return next();
     }
